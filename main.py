@@ -43,7 +43,7 @@ def get_input_device_index():
     for i in range(p.get_device_count()):
         info = p.get_device_info_by_index(i)
         print(f"Device {i}: {info['name']}")
-    device_index = 1
+    device_index = 3
     return device_index
 
 def show_status(snd_data, record_started, record_started_stamp, wav_filename):
