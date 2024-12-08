@@ -16,8 +16,8 @@
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software Foundation,
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-
 """
+import logging
 from __future__ import print_function
 from sys import byteorder
 from array import array
@@ -27,6 +27,21 @@ import time
 import pyaudio
 import wave
 import os
+
+LOGGING_ENABLED = True
+LOG_FILE_PATH = os.path.expanduser("~/vox-recorder.log")
+
+def setup_logging():
+    if LOGGING_ENABLED:
+        logging.basicConfig(filename=LOG_FILE_PATH,
+                            level=logging.DEBUG,
+                            format='%(asctime)s - %(levelname)s - %(message)s')
+        logging.info('Logging is enabled.')
+    else:
+        logging.disable(logging.CRITICAL)
+
+
+setup_logging()
 
 SILENCE_THRESHOLD = 5000
 RECORD_AFTER_SILENCE_SECS = 5
@@ -43,6 +58,7 @@ def get_input_device_index():
     for i in range(p.get_device_count()):
         info = p.get_device_info_by_index(i)
         print(f"Device {i}: {info['name']}")
+        logging.debug(f"Device {i}: {info['name']}")
     device_index = 3
     return device_index
 
@@ -59,14 +75,13 @@ def show_status(snd_data, record_started, record_started_stamp, wav_filename):
         elapsed = time.time() - record_started_stamp;
         print('Recording to file %s-xxxxxxxxxxxxxx.wav (%d seconds recorded)         ' % (wav_filename, elapsed),
               end='\r')
+        logging.debug(f"Recording to file {wav_filename}, {elapsed} seconds recorded.")
     else:
         print('                                                                   ', end='\r')
-
 
 def voice_detected(snd_data):
     "Returns 'True' if sound peaked above the 'silent' threshold"
     return max(snd_data) > SILENCE_THRESHOLD
-
 
 def normalize(snd_data):
     "Average the volume out"
@@ -76,7 +91,6 @@ def normalize(snd_data):
     for i in snd_data:
         r.append(int(i * times))
     return r
-
 
 def trim(snd_data):
     "Trim the blank spots at the start and end"
@@ -103,14 +117,12 @@ def trim(snd_data):
     snd_data.reverse()
     return snd_data
 
-
 def add_silence(snd_data, seconds):
     "Add silence to the start and end of 'snd_data' of length 'seconds' (float)"
     r = array('h', [0 for i in range(int(seconds * RATE))])
     r.extend(snd_data)
     r.extend([0 for i in range(int(seconds * RATE))])
     return r
-
 
 def wait_for_activity():
     """
@@ -120,6 +132,7 @@ def wait_for_activity():
 
     device_index = get_input_device_index()
     if device_index is None:
+        logging.error("Error: No suitable audio input device found.")
         print("Error: No suitable audio input device found.")
         return False
 
@@ -143,13 +156,13 @@ def wait_for_activity():
         del snd_data
 
         if voice:
+            logging.info("Voice detected, starting recording.")
             break
 
     stream.stop_stream()
     stream.close()
     p.terminate()
     return True
-
 
 def record_audio(device_index):
     """
@@ -185,10 +198,10 @@ def record_audio(device_index):
         show_status(snd_data, record_started, record_started_stamp, wav_filename)
 
         if voice and record_started:
-            last_voice_stamp = time.time();
+            last_voice_stamp = time.time()
         elif voice and not record_started:
             record_started = True
-            record_started_stamp = last_voice_stamp = time.time();
+            record_started_stamp = last_voice_stamp = time.time()
             datetime = time.strftime("%Y%m%d%H%M%S")
             wav_filename = '%s/voxrecord-%s' % (WAVEFILES_STORAGEPATH, datetime)
 
@@ -206,6 +219,7 @@ def record_audio(device_index):
     r = normalize(r)
     r = trim(r)
     r = add_silence(r, 0.5)
+    logging.info(f"Recording finished. Saved to: {wav_filename}")
     return sample_width, r, wav_filename
 
 def voxrecord():
@@ -216,13 +230,14 @@ def voxrecord():
     device_index = get_input_device_index()
 
     if device_index is None:
+        logging.error("No suitable audio device found. Exiting.")
         print("No suitable audio device found. Exiting.")
         return
 
     while 1:
         idle = wait_for_activity()
         sample_width, data, wav_filename = record_audio(device_index)
-        data = pack('<' + ('h'*len(data)), *data)
+        data = pack('<' + ('h' * len(data)), *data)
         wf = wave.open(wav_filename, 'wb')
         wf.setnchannels(1)
         wf.setsampwidth(sample_width)
@@ -230,15 +245,14 @@ def voxrecord():
         wf.writeframes(data)
         wf.close()
         print()
-        recinfo = 'Recording finished. Saved to: %s' % (wav_filename)
-        print(recinfo)
-
+        logging.info(f"Recording finished. Saved to: {wav_filename}")
 
 if __name__ == '__main__':
     print("Voxrecorder started. Hit ctrl-c to quit.")
 
     if not os.access(WAVEFILES_STORAGEPATH, os.W_OK):
-        print("Wave file save directory %s does not exist or is not writable. Aborting." % WAVEFILES_STORAGEPATH)
+        logging.error(f"Wave file save directory {WAVEFILES_STORAGEPATH} does not exist or is not writable. Aborting.")
+        print(f"Wave file save directory {WAVEFILES_STORAGEPATH} does not exist or is not writable. Aborting.")
     else:
         voxrecord()
 
