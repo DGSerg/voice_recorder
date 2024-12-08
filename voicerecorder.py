@@ -29,7 +29,7 @@ import os
 import logging
 
 LOGGING_ENABLED = True
-LOG_FILE_PATH = os.path.expanduser("~/vox-recorder.log")
+LOG_FILE_PATH = os.path.expanduser("~voice_recorder/vox-recorder.log")
 
 def setup_logging():
     if LOGGING_ENABLED:
