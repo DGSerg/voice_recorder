@@ -17,7 +17,6 @@
    along with this program; if not, write to the Free Software Foundation,
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 """
-import logging
 from __future__ import print_function
 from sys import byteorder
 from array import array
@@ -27,6 +26,7 @@ import time
 import pyaudio
 import wave
 import os
+import logging
 
 LOGGING_ENABLED = True
 LOG_FILE_PATH = os.path.expanduser("~/vox-recorder.log")
