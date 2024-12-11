@@ -239,8 +239,8 @@ def record_audio(device_index, frequency, receiver):
         elif voice and not record_started:
             record_started = True
             record_started_stamp = last_voice_stamp = time.time()
-            datetime = time.strftime("%Y%m%d%H%M%S")
-            filename = f'{WAVEFILES_STORAGEPATH}/voxrecord-{datetime}'
+            start_datetime = time.strftime("%d-%m-%y %H-%M-%S")
+            filename = f'{WAVEFILES_STORAGEPATH}/{start_datetime} {frequency:.5f} SRC({receiver})'
 
         if record_started and time.time() > (last_voice_stamp + RECORD_AFTER_SILENCE_SECS):
             break
@@ -250,8 +250,8 @@ def record_audio(device_index, frequency, receiver):
     stream.close()
     p.terminate()
 
-    datetime = time.strftime("%Y%m%d%H%M%S")
-    wav_filename = filename + f'-{datetime}.wav'
+    end_time = time.strftime("%H-%M-%S")
+    wav_filename = f'{filename} TO {end_time}.wav'
 
     r = normalize(r)
     r = trim(r)
